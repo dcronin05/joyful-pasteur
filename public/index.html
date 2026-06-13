@@ -290,21 +290,6 @@
         border: 1px solid var(--border-accent);
       }
     }
-
-    @media (max-height: 500px) {
-      header {
-        display: none;
-      }
-    }
-
-    @media (max-height: 400px) {
-      .pip-hint, .action-row {
-        display: none;
-      }
-      .controls-section {
-        padding: 12px 16px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -595,6 +580,45 @@
         alert('Picture-in-Picture is not supported or failed to launch in this browser.');
       }
     });
+
+    // Dynamic resize listener to sacrifice header/footer relative to the video height
+    function adjustLayout() {
+      const header = document.querySelector('header');
+      const pipHint = document.getElementById('pip-instructions');
+      const actionRow = document.querySelector('.action-row');
+      
+      if (!videoPlayer) return;
+      
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      
+      // Calculate active video height based on actual aspect ratio
+      const aspect = (videoPlayer.videoWidth && videoPlayer.videoHeight)
+        ? (videoPlayer.videoHeight / videoPlayer.videoWidth)
+        : (9 / 16);
+      const videoH = w * aspect;
+      
+      // Sacrifice header if remaining window height is less than video height + header threshold (approx 70px)
+      if (h < videoH + 70) {
+        if (header) header.style.display = 'none';
+      } else {
+        if (header) header.style.display = 'flex';
+      }
+      
+      // Sacrifice footer hints (PiP instructions + bookmarklet bar) if height is tight (approx 110px)
+      if (h < videoH + 110) {
+        if (pipHint) pipHint.style.display = 'none';
+        if (actionRow) actionRow.style.display = 'none';
+      } else {
+        if (pipHint) pipHint.style.display = 'block';
+        if (actionRow) actionRow.style.display = 'flex';
+      }
+    }
+
+    window.addEventListener('resize', adjustLayout);
+    videoPlayer.addEventListener('loadedmetadata', adjustLayout);
+    // Trigger on initial page load / state changes
+    adjustLayout();
   </script>
 </body>
 </html>
