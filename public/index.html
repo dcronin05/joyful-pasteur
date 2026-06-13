@@ -439,15 +439,6 @@
       isPlexActive = (state.service === 'plex');
       urlInput.value = '';
       
-      const isUrlLive = state.url && (state.url.includes('/live/') || state.url.includes('live') || state.url.includes('.m3u8'));
-      if (liveBtn) {
-        if (isUrlLive) {
-          liveBtn.style.display = 'inline-block';
-        } else {
-          liveBtn.style.display = 'none';
-        }
-      }
-
       // If we don't have the final stream URL yet, query the server to resolve it
       if (!state.streamUrl) {
         try {
@@ -466,6 +457,13 @@
         plexPlaceholder.style.display = 'none';
         pipBtn.style.display = 'inline-block';
         pipInstructions.style.display = 'block';
+
+        // Check if the stream is live (checks both original URL and resolved stream URL)
+        const isUrlLive = (state.url && (state.url.includes('/live/') || state.url.includes('live') || state.url.includes('.m3u8'))) ||
+                          (state.streamUrl && (state.streamUrl.includes('hls_playlist') || state.streamUrl.includes('.m3u8') || state.streamUrl.includes('manifest')));
+        if (liveBtn) {
+          liveBtn.style.display = isUrlLive ? 'inline-block' : 'none';
+        }
 
         loadStream(state.streamUrl);
 
