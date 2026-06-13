@@ -103,7 +103,6 @@
     .player-container {
       width: 100%;
       aspect-ratio: 16/9;
-      max-height: calc(100vh - 180px);
       position: relative;
       background: #000;
     }
@@ -289,6 +288,21 @@
       .secondary-btn {
         margin-left: 0;
         border: 1px solid var(--border-accent);
+      }
+    }
+
+    @media (max-height: 500px) {
+      header {
+        display: none;
+      }
+    }
+
+    @media (max-height: 400px) {
+      .pip-hint, .action-row {
+        display: none;
+      }
+      .controls-section {
+        padding: 12px 16px;
       }
     }
   </style>
