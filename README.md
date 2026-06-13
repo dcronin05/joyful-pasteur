@@ -1,51 +1,83 @@
-# Portable n.eko Virtual Browser (IaC)
+# Tailnet Media Sync Portal
 
-A portable, self-contained infrastructure-as-code repository to deploy **n.eko** (a self-hosted virtual browser streamed via WebRTC) using Docker Compose. 
+A portable, containerized real-time playback synchronization portal for **YouTube** and **Plex** across your desktop and mobile devices. 
 
-This setup runs a single, persistent Google Chrome instance on your server. All connected devices (laptops, phones, tablets) act as real-time interactive screens to that exact same browser session, meaning:
-- You get native, uncompromised YouTube UI (or other streaming apps).
-- You can sign in and keep your history/subscriptions.
-- You get perfect session handoff: you can start watching on a laptop, and then immediately pick up and control the exact same player/tab from your phone by visiting the portal URL.
+This portal uses a native HTML5 `<video>` player paired with Socket.io WebSockets to synchronize seeking, playing, and pausing in real time. Because it runs natively inside the client's browser, it dynamically adapts to any mobile or desktop aspect ratio, handles live HLS stream rendering, and supports native, always-on-top Picture-in-Picture.
 
 ---
 
-## Architecture & Configuration
+## Key Features
 
-This deployment is fully parameterized using a `.env` file to support IaC orchestration.
+1. **Native Player & Responsive Layout**: Responsive viewport support without letterboxing. Supports native Picture-in-Picture (PiP) via the browser's native API on macOS, iOS, Windows, and Android.
+2. **Modular Stream Resolvers**:
+   - **YouTube**: Resolves standard and live videos on the fly using containerized `yt-dlp`.
+   - **Plex**: Resolves library item detail links (e.g. `plex.tv` metadata pages) to direct play stream URLs (`.mp4`) or transcode `.m3u8` playlists (using Plex's Universal Transcoder).
+3. **CORS & IP-Bypassing Media Proxy**: Contains an integrated streaming proxy (`/api/proxy`) that rewrites HLS manifests on the fly and streams media chunks. This bypasses client-side CORS errors and locks Google Video streams to the portal's outbound network signature.
+4. **PWA & Bookmarklet casting**:
+   - Registerable as a PWA with a **Web Share Target** (allowing you to "Share" links directly from mobile YouTube/Plex apps).
+   - "Cast to Portal" bookmarklet for one-click casting from desktop browsers.
+5. **Autoplay & Loopback Protection**: Includes custom browser synchronization states that handle browser autoplay policies and protect against infinite WebSocket state ping-pong loops.
 
-### 1. Copy the Configuration Template
-Copy `.env.example` to `.env` before running the stack:
+---
+
+## Environment Configuration
+
+This portal is fully parameterizable via Docker Compose and environment variables. Copy the template to initialize your configuration:
+
 ```bash
 cp .env.example .env
 ```
 
-### 2. Crucial IaC Variables
-- `NEKO_WEBRTC_NAT1TO1`: **MUST** be set to the server's IP address (e.g. its Tailscale IP like `100.79.77.74` or its DNS name). This allows the WebRTC protocol to establish a direct media streaming connection to your client devices.
-- `NEKO_WEBRTC_PORT_RANGE`: A UDP port range (default `52000-52100`) mapped to the host. Ensure these UDP ports are open on the host's firewall (Tailscale interface allows this by default).
-- `NEKO_PROFILE_VOLUME`: Maps the browser profile directory to persist settings, logged-in YouTube sessions, and extensions (like adblockers) across container restarts.
+### Configuration Variables
+
+| Variable | Description | Example / Default |
+| :--- | :--- | :--- |
+| `PORTAL_IMAGE` | The target container image tag. | `ghcr.io/dcronin05/joyful-pasteur:latest` |
+| `PORTAL_PORT` | The external port for the web interface. | `8080` |
+| `PLEX_SERVER_URL` | *(Optional)* The URL of your Plex server. | `http://10.100.15.22:32400` |
+| `PLEX_TOKEN` | *(Optional)* Your Plex authentication token. | `YourSecretPlexToken` |
+
+> [!NOTE]
+> If `PLEX_SERVER_URL` and `PLEX_TOKEN` are not provided, Plex links shared to the portal will gracefully fall back to a styled UI button redirecting the client to open and watch the video in the official Plex Web/Desktop client.
 
 ---
 
-## Deployment
+## Deployment & Running
 
-To deploy the container stack:
+### Running with Docker Compose (Recommended)
+Launch the containerized stack in detached mode:
 ```bash
 docker compose up -d
 ```
 
-To tear down the container stack:
+#### Hardware Acceleration (GPU)
+If you run this portal on a host equipped with an NVIDIA GPU (e.g. Tower) and wish to enable hardware access in the container for future transcoding hooks, uncomment the `deploy` resources section in `docker-compose.yml`:
+```yaml
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+```
+
+### Running Locally (Development)
+Ensure `Node.js` (v20+), `yt-dlp`, and `ffmpeg` are installed locally and in your system PATH.
 ```bash
-docker compose down
+# Install dependencies
+npm install
+
+# Start the server (includes IPv4 DNS resolution preference)
+node --dns-result-order=ipv4first server.js
 ```
 
 ---
 
-## How to Get the Floating (Always-on-Top) Player
+## Integration Guidelines for Other Agents
 
-Since n.eko streams Chrome via WebRTC inside a standard web page, you can achieve a perfect floating, resizable player on macOS and Windows without extra software:
+If another agent is wrapping this sync portal into a custom Tailscale container architecture (e.g. sidecar routing), it should:
 
-1. Open the n.eko portal in **Chrome, Edge, or Safari** on your computer.
-2. In the n.eko portal, double click the virtual browser's video stream or go full screen.
-3. Right-click on the browser's video element (you might need to right-click twice in Chrome to bypass the custom player context menu and get the browser's native context menu).
-4. Select **"Picture-in-Picture"** (or **"Enter Picture-in-Picture"**).
-5. The WebRTC stream will pop out into a floating, resizable, always-on-top window that you can drag between monitors!
+1. **Deploy in the same Network Namespace**: Share the network namespace of a Tailscale sidecar container to assign the sync portal a dedicated Tailscale IP on your Tailnet.
+2. **Inject Credentials**: Pass the `PLEX_SERVER_URL` and `PLEX_TOKEN` as environment variables directly to the container environment.
+3. **Configure Volume Mounts**: (Optional) Mount persistent application states if extending the server. No volume mapping is required for normal operations as media states are held in-memory.
