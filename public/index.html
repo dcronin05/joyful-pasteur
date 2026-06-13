@@ -438,7 +438,15 @@
       
       isPlexActive = (state.service === 'plex');
       urlInput.value = '';
-      if (liveBtn) liveBtn.style.display = 'none';
+      
+      const isUrlLive = state.url && (state.url.includes('/live/') || state.url.includes('live') || state.url.includes('.m3u8'));
+      if (liveBtn) {
+        if (isUrlLive) {
+          liveBtn.style.display = 'inline-block';
+        } else {
+          liveBtn.style.display = 'none';
+        }
+      }
 
       // If we don't have the final stream URL yet, query the server to resolve it
       if (!state.streamUrl) {
@@ -487,13 +495,32 @@
       if (!videoPlayer || isPlexActive && !state.streamUrl) return;
 
       try {
-        const targetTime = state.timestamp;
+        let targetTime = state.timestamp;
+        
+        // Adjust for elapsed time since the state was updated if the video is playing
+        if (state.isPlaying && state.updatedAt > 0) {
+          const elapsed = (Date.now() - state.updatedAt) / 1000;
+          targetTime += elapsed;
+        }
+
         const shouldPlay = state.isPlaying;
 
         // Only seek if metadata is loaded (readyState >= 1)
         if (videoPlayer.readyState >= 1) {
-          if (Math.abs(videoPlayer.currentTime - targetTime) > 2.5) {
-            videoPlayer.currentTime = targetTime;
+          const isUrlLive = state.url && (state.url.includes('/live/') || state.url.includes('live') || state.url.includes('.m3u8'));
+          if (isUrlLive) {
+            // Live stream seek to end
+            const livePosition = videoPlayer.seekable && videoPlayer.seekable.length > 0
+              ? videoPlayer.seekable.end(videoPlayer.seekable.length - 1)
+              : 0;
+            if (livePosition > 0 && Math.abs(videoPlayer.currentTime - (livePosition - 2)) > 5) {
+              videoPlayer.currentTime = Math.max(0, livePosition - 2);
+            }
+          } else {
+            // Regular video seek
+            if (Math.abs(videoPlayer.currentTime - targetTime) > 2.5) {
+              videoPlayer.currentTime = targetTime;
+            }
           }
         }
 
@@ -642,6 +669,13 @@
         }
       });
     }
+
+    // First-click fallback to trigger playback if blocked by autoplay policy
+    document.addEventListener('click', () => {
+      if (localState && localState.isPlaying && videoPlayer && videoPlayer.paused) {
+        videoPlayer.play().catch(e => console.log('Autoplay bypass failed:', e));
+      }
+    }, { once: true });
   </script>
 </body>
 </html>
