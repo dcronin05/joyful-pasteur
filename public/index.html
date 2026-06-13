@@ -325,6 +325,7 @@
       <div class="input-group">
         <input type="text" id="media-url" placeholder="Paste YouTube or Plex link...">
         <button id="send-btn">Send & Sync</button>
+        <button id="live-btn" class="secondary-btn" style="display: none; color: #ef4444; font-weight: 600;">🔴 Live</button>
         <button id="pip-btn" class="secondary-btn">📺 Float Player</button>
       </div>
 
@@ -357,6 +358,7 @@
     const plexPlaceholder = document.getElementById('plex-placeholder');
     const plexLink = document.getElementById('plex-link');
     const pipBtn = document.getElementById('pip-btn');
+    const liveBtn = document.getElementById('live-btn');
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
     const urlInput = document.getElementById('media-url');
@@ -436,6 +438,7 @@
       
       isPlexActive = (state.service === 'plex');
       urlInput.value = '';
+      if (liveBtn) liveBtn.style.display = 'none';
 
       // If we don't have the final stream URL yet, query the server to resolve it
       if (!state.streamUrl) {
@@ -619,6 +622,26 @@
     videoPlayer.addEventListener('loadedmetadata', adjustLayout);
     // Trigger on initial page load / state changes
     adjustLayout();
+
+    // Live stream edge seeking handlers
+    videoPlayer.addEventListener('durationchange', () => {
+      if (videoPlayer.duration === Infinity) {
+        if (liveBtn) liveBtn.style.display = 'inline-block';
+      } else {
+        if (liveBtn) liveBtn.style.display = 'none';
+      }
+    });
+
+    if (liveBtn) {
+      liveBtn.addEventListener('click', () => {
+        if (videoPlayer.seekable && videoPlayer.seekable.length > 0) {
+          const livePosition = videoPlayer.seekable.end(videoPlayer.seekable.length - 1);
+          // Seek to 2 seconds before the live edge to ensure buffer fills safely
+          videoPlayer.currentTime = Math.max(0, livePosition - 2);
+          console.log('Jumping to live edge at:', livePosition);
+        }
+      });
+    }
   </script>
 </body>
 </html>
