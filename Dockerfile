@@ -1,5 +1,10 @@
 FROM node:20-alpine
 
+LABEL org.opencontainers.image.title="Portal"
+LABEL org.opencontainers.image.description="Portal - A sleek, minimalist tailnet media sync portal to sync YouTube and Plex playback in real-time across devices."
+LABEL org.opencontainers.image.source="https://github.com/dcronin05/joyful-pasteur"
+LABEL org.opencontainers.image.licenses="MIT"
+
 # Install python3, ffmpeg, curl and download/install the latest yt-dlp
 RUN apk add --no-cache python3 ffmpeg curl && \
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \

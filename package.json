@@ -1,7 +1,7 @@
 {
-  "name": "tailnet-media-sync",
+  "name": "portal",
   "version": "1.0.0",
-  "description": "A lightweight self-hosted portal to sync YouTube and Plex playback in real-time across devices.",
+  "description": "Portal - A sleek, minimalist tailnet media sync portal to sync YouTube and Plex playback in real-time across devices.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

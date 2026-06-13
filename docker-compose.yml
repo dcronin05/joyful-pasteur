@@ -1,9 +1,9 @@
 services:
-  sync-portal:
+  portal:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${PORTAL_IMAGE:-sync-portal:latest}
+    image: ${PORTAL_IMAGE:-ghcr.io/dcronin05/joyful-pasteur:latest}
     restart: unless-stopped
     ports:
       - "${PORTAL_PORT:-8080}:8080"

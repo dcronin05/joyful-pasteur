@@ -1,22 +1,27 @@
-# Tailnet Media Sync Portal
+# Portal
 
-A portable, containerized real-time playback synchronization portal for **YouTube** and **Plex** across your desktop and mobile devices. 
+A sleek, minimalist, containerized real-time media synchronization portal for **YouTube** and **Plex** across tailnets (or local networks).
 
-This portal uses a native HTML5 `<video>` player paired with Socket.io WebSockets to synchronize seeking, playing, and pausing in real time. Because it runs natively inside the client's browser, it dynamically adapts to any mobile or desktop aspect ratio, handles live HLS stream rendering, and supports native, always-on-top Picture-in-Picture.
+**Portal** runs as a self-contained web service, utilizing a native HTML5 `<video>` player and Socket.io WebSockets to synchronize seeking, playing, and pausing in real time across any number of connected browser clients.
 
 ---
 
 ## Key Features
 
-1. **Native Player & Responsive Layout**: Responsive viewport support without letterboxing. Supports native Picture-in-Picture (PiP) via the browser's native API on macOS, iOS, Windows, and Android.
-2. **Modular Stream Resolvers**:
+1. **Minimalist Responsive Aesthetics**: Styled in a Zinc-dark palette with clean, low-contrast typography and a unified command input bar.
+2. **Edge-to-Edge Fluid Resizing**: Spans 100% of the window width, preserving aspect ratio natively. 
+3. **Height-Adaptive Layout (Header/Footer Hiding)**: A dynamic Javascript resize listener monitors viewport constraints relative to the video height, automatically hiding the top header and footer details on short screens so you can resize your desktop browser into a compact floating view without vertical cropping or scrollbars.
+4. **🔴 Live Stream Sync**: Auto-detects livestreams and renders a red **🔴 Live** button. Clicking it seeks to the live edge (using a buffer-safe 2-second offset), and automatically jumps all other connected clients to the live edge in sync.
+5. **Autoplay Bypass & Drift Correction**:
+   - **Bypass**: Triggers playback on first click anywhere on the page if autoplay is blocked by browser policies.
+   - **Sync Drift Correction**: Calculates connection latency and drift since the last server state update (`(Date.now() - state.updatedAt) / 1000`) on page load/seek, ensuring newly joining clients snap to the exact second active on other devices.
+6. **Modular Stream Resolvers**:
    - **YouTube**: Resolves standard and live videos on the fly using containerized `yt-dlp`.
-   - **Plex**: Resolves library item detail links (e.g. `plex.tv` metadata pages) to direct play stream URLs (`.mp4`) or transcode `.m3u8` playlists (using Plex's Universal Transcoder).
-3. **CORS & IP-Bypassing Media Proxy**: Contains an integrated streaming proxy (`/api/proxy`) that rewrites HLS manifests on the fly and streams media chunks. This bypasses client-side CORS errors and locks Google Video streams to the portal's outbound network signature.
-4. **PWA & Bookmarklet casting**:
-   - Registerable as a PWA with a **Web Share Target** (allowing you to "Share" links directly from mobile YouTube/Plex apps).
-   - "Cast to Portal" bookmarklet for one-click casting from desktop browsers.
-5. **Autoplay & Loopback Protection**: Includes custom browser synchronization states that handle browser autoplay policies and protect against infinite WebSocket state ping-pong loops.
+   - **Plex**: Resolves detail links to direct play stream URLs (`.mp4`) or transcode `.m3u8` playlists using Plex's Universal Transcoder.
+7. **CORS & IP-Bypassing Media Proxy**: Integrated streaming proxy (`/api/proxy`) that streams manifests/video chunks, bypasses CORS blocks, and locks Google Video streams to the portal's outbound network signature.
+8. **PWA & Bookmarklet casting**:
+   - Fully PWA-compliant with local vector assets (`/icon.svg`) and **Web Share Target** for mobile app sharing.
+   - Draggable "Cast to Portal" bookmarklet badge for desktop browsers.
 
 ---
 
