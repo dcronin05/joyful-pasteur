@@ -1,0 +1,8 @@
+{
+  "HomepageLocation": "https://www.youtube.com",
+  "HomepageIsNewTabPage": false,
+  "RestoreOnStartup": 4,
+  "RestoreOnStartupURLs": [
+    "https://www.youtube.com"
+  ]
+}

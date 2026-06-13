@@ -1,0 +1,28 @@
+{
+  "name": "Tailnet Media Sync Portal",
+  "short_name": "Portal",
+  "description": "A portal to sync YouTube and Plex streaming sessions in real-time across devices.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0c1b",
+  "theme_color": "#a855f7",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3159/3159805.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/api/share",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

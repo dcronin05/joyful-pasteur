@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tailnet Media Sync Portal</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.min.js"></script>
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f0c1b 0%, #15102a 50%, #06020f 100%);
+      --card-bg: rgba(255, 255, 255, 0.03);
+      --card-border: rgba(255, 255, 255, 0.06);
+      --glow-color: rgba(147, 51, 234, 0.3);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #a855f7;
+      --accent-hover: #c084fc;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 5px;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: linear-gradient(to right, #a855f7, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444; /* Default disconnected */
+      box-shadow: 0 0 8px #ef4444;
+      transition: all 0.3s ease;
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .main-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .player-container {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 0 30px var(--glow-color);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .player-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      outline: none;
+    }
+
+    .plex-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      padding: 30px;
+      text-align: center;
+      background: linear-gradient(135deg, #1f1f2e 0%, #11111b 100%);
+    }
+
+    .plex-icon {
+      font-size: 3rem;
+      color: #e5a93b; /* Plex Yellow */
+    }
+
+    .plex-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #e5a93b;
+    }
+
+    .plex-btn {
+      display: inline-block;
+      background: #e5a93b;
+      color: #000;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      margin-top: 10px;
+    }
+
+    .plex-btn:hover {
+      background: #f1be5e;
+      transform: translateY(-2px);
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 20px;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .secondary-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+    }
+
+    .secondary-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--text-muted);
+    }
+
+    .action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 5px;
+    }
+
+    .bookmarklet-info {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .bookmarklet-link {
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: grab;
+      font-weight: 600;
+    }
+
+    /* Picture in Picture Instructions Overlay */
+    .pip-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .input-group {
+        flex-direction: column;
+      }
+      input[type="text"] {
+        width: 100%;
+      }
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Tailnet Portal</h1>
+      <div class="status-badge">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Connecting...</span>
+      </div>
+    </header>
+
+    <main class="main-card">
+      <div class="player-container" id="player-wrapper">
+        <video id="native-player" controls playsinline crossorigin="anonymous"></video>
+        
+        <!-- Plex Fallback Placeholder (initially hidden) -->
+        <div id="plex-placeholder" class="plex-placeholder" style="display: none; width: 100%; height: 100%;">
+          <div class="plex-icon">🎬</div>
+          <div class="plex-title">Plex Media Stream</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 400px; margin-bottom: 5px;">
+            Plex Server URL and Token are not configured on this server instance. Direct streaming is unavailable.
+          </p>
+          <a id="plex-link" href="#" target="_blank" class="plex-btn">Open in Plex Client</a>
+        </div>
+      </div>
+
+      <div class="pip-hint" id="pip-instructions">
+        💡 <b>Pro Tip:</b> Tap the <b>Float Player</b> button to pop the video out into a native floating window.
+      </div>
+
+      <div class="controls">
+        <div class="input-group">
+          <input type="text" id="media-url" placeholder="Paste YouTube or Plex link here...">
+          <button id="send-btn">Send & Sync</button>
+          <button id="pip-btn" class="secondary-btn">📺 Float Player</button>
+        </div>
+
+        <div class="action-row">
+          <div class="bookmarklet-info">
+            Drag this to your bookmarks bar to sync in 1-click: <br>
+            <a class="bookmarklet-link" id="bookmarklet-href" href="#">Cast to Portal</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Global error listener to report client-side crashes back to server logs
+    window.onerror = function (message, source, lineno, colno, error) {
+      socket.emit('debug-error', { message, source, lineno, colno, error: error ? error.stack : null });
+    };
+    window.onunhandledrejection = function (event) {
+      socket.emit('debug-error', { message: 'Unhandled Promise Rejection: ' + event.reason });
+    };
+
+    const videoPlayer = document.getElementById('native-player');
+    const plexPlaceholder = document.getElementById('plex-placeholder');
+    const plexLink = document.getElementById('plex-link');
+    const pipBtn = document.getElementById('pip-btn');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const urlInput = document.getElementById('media-url');
+    const sendBtn = document.getElementById('send-btn');
+    const pipInstructions = document.getElementById('pip-instructions');
+
+    let isPlexActive = false;
+    let hlsInstance = null;
+    let isSyncing = false; // Flag to prevent socket loops
+
+    let localState = {
+      service: 'youtube',
+      url: '',
+      timestamp: 0,
+      isPlaying: false,
+      updatedAt: 0
+    };
+
+    // Generate Bookmarklet Link dynamically based on current host
+    const host = window.location.origin;
+    const bookmarkletCode = `javascript:(function(){const url=window.location.href;fetch('${host}/api/share?url='+encodeURIComponent(url)).then(r=>{if(r.ok)window.alert('Casted to Portal successfully!');else window.alert('Failed to cast');}).catch(e=>window.alert('Error casting: '+e));})();`;
+    document.getElementById('bookmarklet-href').setAttribute('href', bookmarkletCode);
+
+    // Socket status handlers
+    socket.on('connect', () => {
+      statusDot.className = 'status-dot connected';
+      statusText.innerText = 'Connected';
+    });
+
+    socket.on('disconnect', () => {
+      statusDot.className = 'status-dot';
+      statusText.innerText = 'Disconnected';
+    });
+
+    // Helper to destroy dynamic Hls.js instance
+    function destroyHls() {
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+    }
+
+    // Helper to load video stream URL into the player
+    function loadStream(streamUrl) {
+      destroyHls();
+      videoPlayer.src = '';
+      
+      if (streamUrl.includes('.m3u8') || streamUrl.includes('transcode/universal')) {
+        // HLS playlist
+        if (Hls.isSupported()) {
+          hlsInstance = new Hls();
+          hlsInstance.loadSource(streamUrl);
+          hlsInstance.attachMedia(videoPlayer);
+          console.log('HLS.js loaded stream');
+        } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+          // Native Safari HLS
+          videoPlayer.src = streamUrl;
+          console.log('Native Safari HLS loaded stream');
+        } else {
+          console.error('HLS streaming is not supported in this browser.');
+          alert('HLS stream detected but your browser does not support it.');
+        }
+      } else {
+        // Direct video files (e.g. progressive mp4/m4v/mov)
+        videoPlayer.src = streamUrl;
+        console.log('Progressive MP4/WebM loaded stream');
+      }
+    }
+
+    // Load media state and fetch stream URL from server if needed
+    async function loadNewMedia(state) {
+      isSyncing = true;
+      localState = { ...state };
+      
+      isPlexActive = (state.service === 'plex');
+      urlInput.value = '';
+
+      // If we don't have the final stream URL yet, query the server to resolve it
+      if (!state.streamUrl) {
+        try {
+          const res = await fetch(`/api/stream-url?url=${encodeURIComponent(state.url)}`);
+          if (!res.ok) throw new Error(await res.text());
+          const data = await res.json();
+          state.streamUrl = data.streamUrl;
+        } catch (e) {
+          console.error('Failed to resolve stream URL:', e);
+        }
+      }
+
+      if (state.streamUrl) {
+        // We resolved a direct stream URL (YouTube or Plex)
+        videoPlayer.style.display = 'block';
+        plexPlaceholder.style.display = 'none';
+        pipBtn.style.display = 'inline-block';
+        pipInstructions.style.display = 'block';
+
+        loadStream(state.streamUrl);
+
+        // Sync player seek and play/pause state once metadata is loaded
+        videoPlayer.onloadedmetadata = () => {
+          isSyncing = true;
+          syncPlayerState(state);
+        };
+      } else {
+        // Fallback: If it's Plex and we couldn't resolve a stream URL, display click-through placeholder
+        if (isPlexActive) {
+          videoPlayer.style.display = 'none';
+          plexPlaceholder.style.display = 'flex';
+          plexLink.href = state.url;
+          pipBtn.style.display = 'none';
+          pipInstructions.style.display = 'none';
+          isSyncing = false;
+        } else {
+          alert('Failed to resolve stream URL for the provided link.');
+          isSyncing = false;
+        }
+      }
+    }
+
+    // Sync play/pause state and seek location
+    function syncPlayerState(state) {
+      if (!videoPlayer || isPlexActive && !state.streamUrl) return;
+
+      const targetTime = state.timestamp;
+      const shouldPlay = state.isPlaying;
+
+      // Adjust seek position if off by more than 2 seconds
+      if (Math.abs(videoPlayer.currentTime - targetTime) > 2) {
+        videoPlayer.currentTime = targetTime;
+      }
+
+      // Sync play/pause
+      if (shouldPlay && videoPlayer.paused) {
+        videoPlayer.play().catch(e => console.log('Autoplay blocked by browser policy:', e));
+      } else if (!shouldPlay && !videoPlayer.paused) {
+        videoPlayer.pause();
+      }
+
+      // Briefly allow state update transitions to complete, then release flag
+      setTimeout(() => {
+        isSyncing = false;
+      }, 100);
+    }
+
+    // Broadcast local player adjustments to other clients
+    function broadcastState(isPlaying) {
+      if (isSyncing) return;
+
+      localState.timestamp = videoPlayer.currentTime;
+      localState.isPlaying = isPlaying;
+      localState.updatedAt = Date.now();
+
+      socket.emit('state-change', localState);
+    }
+
+    // Bind event listeners to native video element
+    videoPlayer.addEventListener('play', () => broadcastState(true));
+    videoPlayer.addEventListener('pause', () => broadcastState(false));
+    videoPlayer.addEventListener('seeking', () => broadcastState(!videoPlayer.paused));
+
+    // Handle WebSocket media-change (e.g. URL submitted)
+    socket.on('media-change', (state) => {
+      console.log('Media change event received:', state);
+      loadNewMedia(state);
+    });
+
+    // Handle WebSocket initialization
+    socket.on('init-state', (state) => {
+      console.log('Init state received:', state);
+      loadNewMedia(state);
+    });
+
+    // Handle WebSocket state sync changes
+    socket.on('state-change', (state) => {
+      if (isPlexActive && !state.streamUrl) return; // Ignore updates if in fallback mode
+      console.log('State change event received:', state);
+      
+      isSyncing = true;
+      
+      if (state.url !== localState.url) {
+        loadNewMedia(state);
+      } else {
+        syncPlayerState(state);
+      }
+    });
+
+    // Submit new URL manually from controls
+    function submitUrl() {
+      const url = urlInput.value.trim();
+      if (url) {
+        socket.emit('media-change', { url: url });
+      }
+    }
+
+    sendBtn.addEventListener('click', submitUrl);
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitUrl();
+    });
+
+    // Float Player Picture-in-Picture Button click handler
+    pipBtn.addEventListener('click', async () => {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else if (videoPlayer && videoPlayer.style.display !== 'none') {
+          await videoPlayer.requestPictureInPicture();
+        } else {
+          alert('No active video stream to float.');
+        }
+      } catch (error) {
+        console.error('Picture-in-Picture failed:', error);
+        alert('Picture-in-Picture is not supported or failed to launch in this browser.');
+      }
+    });
+  </script>
+</body>
+</html>
